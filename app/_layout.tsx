@@ -1,0 +1,185 @@
+import "@/global.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Stack, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import "react-native-reanimated";
+import { Platform } from "react-native";
+import * as Notifications from "expo-notifications";
+import "@/lib/_core/nativewind-pressable";
+import { ThemeProvider } from "@/lib/theme-provider";
+import { SoundFeedbackProvider } from "@/lib/sound-feedback";
+import { LessonAudioProvider } from "@/lib/lesson-audio";
+import { AppErrorBoundary } from "@/components/app-error-boundary";
+import { inspectKnowledgeReview } from "@/lib/knowledge-review";
+import { loadCompletedLessons } from "@/lib/course-progress";
+import {
+  SafeAreaFrameContext,
+  SafeAreaInsetsContext,
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from "react-native-safe-area-context";
+import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
+
+import { trpc, createTRPCClient } from "@/lib/trpc";
+import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+
+const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
+
+function getWebFrame(): Rect {
+  if (Platform.OS !== "web" || typeof window === "undefined") return DEFAULT_WEB_FRAME;
+  return { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight };
+}
+
+if (Platform.OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }),
+  });
+}
+
+export const unstable_settings = {
+  anchor: "(tabs)",
+};
+
+export default function RootLayout() {
+  const router = useRouter();
+  const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
+  const initialFrame = initialWindowMetrics?.frame ?? getWebFrame();
+
+  const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
+  const [frame, setFrame] = useState<Rect>(initialFrame);
+
+  // Initialize Manus runtime for cookie injection from parent container
+  useEffect(() => {
+    return initManusRuntime();
+  }, []);
+
+  const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
+    setInsets(metrics.insets);
+    setFrame(metrics.frame);
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const updateWebFrame = () => setFrame(getWebFrame());
+    updateWebFrame();
+    window.addEventListener("resize", updateWebFrame);
+    const unsubscribe = subscribeSafeAreaInsets(handleSafeAreaUpdate);
+    return () => {
+      window.removeEventListener("resize", updateWebFrame);
+      unsubscribe();
+    };
+  }, [handleSafeAreaUpdate]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const redirect = (response: Notifications.NotificationResponse) => {
+      const url = response.notification.request.content.data?.url;
+      if (typeof url === "string" && url.startsWith("/")) router.push(url as never);
+    };
+    Notifications.getLastNotificationResponseAsync().then((response) => { if (response) redirect(response); });
+    const subscription = Notifications.addNotificationResponseReceivedListener(redirect);
+    return () => subscription.remove();
+  }, [router]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const completed = await loadCompletedLessons();
+      const review = await inspectKnowledgeReview(completed);
+      if (!active) return;
+      if (review.recoveryRequired) router.replace("/knowledge-check?mode=recovery" as never);
+      else if (review.weeklyPromptRequired) router.push("/knowledge-check?mode=weekly-intro" as never);
+    })();
+    return () => { active = false; };
+  }, [router]);
+
+  // Create clients once and reuse them
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            // Disable automatic refetching on window focus for mobile
+            refetchOnWindowFocus: false,
+            // Retry failed requests once
+            retry: 1,
+          },
+        },
+      }),
+  );
+  const [trpcClient] = useState(() => createTRPCClient());
+
+  // Ensure minimum 8px padding for top and bottom on mobile
+  const providerInitialMetrics = useMemo(() => {
+    const metrics = initialWindowMetrics ?? { insets: initialInsets, frame: initialFrame };
+    return {
+      ...metrics,
+      insets: {
+        ...metrics.insets,
+        top: Math.max(metrics.insets.top, 16),
+        bottom: Math.max(metrics.insets.bottom, 12),
+      },
+    };
+  }, [initialInsets, initialFrame]);
+
+  const content = (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          {/* Default to hiding native headers so raw route segments don't appear (e.g. "(tabs)", "products/[id]"). */}
+          {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
+          {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}
+          <Stack screenOptions={{ headerShown: false, animation: "fade_from_bottom", animationDuration: 220 }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="oauth/callback" />
+            <Stack.Screen name="practice" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="reminders" />
+            <Stack.Screen name="weekly-report" />
+            <Stack.Screen name="weekly-goal" />
+            <Stack.Screen name="improvements" />
+            <Stack.Screen name="study-lab" />
+            <Stack.Screen name="learning-tools" />
+            <Stack.Screen name="accessibility" />
+            <Stack.Screen name="focus" />
+            <Stack.Screen name="growth" />
+            <Stack.Screen name="sandbox" />
+            <Stack.Screen name="mentor-request" />
+            <Stack.Screen name="project-hub" />
+            <Stack.Screen name="skill-map" />
+            <Stack.Screen name="csv-lab" />
+            <Stack.Screen name="api-workshop" />
+            <Stack.Screen name="bookmarks" />
+            <Stack.Screen name="knowledge-check" />
+          </Stack>
+          <StatusBar style="light" />
+        </QueryClientProvider>
+      </trpc.Provider>
+    </GestureHandlerRootView>
+  );
+
+  const shouldOverrideSafeArea = Platform.OS === "web";
+
+  if (shouldOverrideSafeArea) {
+    return (
+      <AppErrorBoundary><ThemeProvider><SoundFeedbackProvider><LessonAudioProvider>
+        <SafeAreaProvider initialMetrics={providerInitialMetrics}>
+          <SafeAreaFrameContext.Provider value={frame}>
+            <SafeAreaInsetsContext.Provider value={insets}>
+              {content}
+            </SafeAreaInsetsContext.Provider>
+          </SafeAreaFrameContext.Provider>
+        </SafeAreaProvider>
+      </LessonAudioProvider></SoundFeedbackProvider></ThemeProvider></AppErrorBoundary>
+    );
+  }
+
+  return (
+    <AppErrorBoundary><ThemeProvider><SoundFeedbackProvider><LessonAudioProvider>
+      <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
+    </LessonAudioProvider></SoundFeedbackProvider></ThemeProvider></AppErrorBoundary>
+  );
+}

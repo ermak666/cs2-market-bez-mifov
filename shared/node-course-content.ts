@@ -1,0 +1,41 @@
+import type { CourseData } from "./course-types";
+type Stage = "junior" | "middle" | "senior" | "applied";
+type Seed = { title: string; analogy: string; code: string; focus: string };
+const security = "Безопасность: учебная песочница не запускает сервер, не открывает порт, не получает сеть, файлы, процессы, секреты и не устанавливает пакеты.";
+const seeds: Record<Stage, Seed[]> = {
+  junior: [
+    { title: "Node.js и JavaScript вне браузера", analogy: "Node.js — диспетчерская, где JavaScript принимает и распределяет записки вне окна браузера.", code: "console.log('Привет из Node.js');", focus: "Node.js запускает JavaScript как серверную или инструментальную программу; среда браузера здесь не доступна автоматически." },
+    { title: "Модули ESM", analogy: "Модуль — отдельная коробка с одной понятной вещью и наклейкой export.", code: "export function add(a, b) { return a + b; }", focus: "Разделяйте логику на маленькие модули с ясными входами и выходами." },
+    { title: "import", analogy: "import — аккуратно взять нужную вещь из подписанной коробки.", code: "import { add } from './math.js';", focus: "Импортируйте только нужное и используйте понятные локальные пути." },
+    { title: "Promise", analogy: "Promise — талон ожидания: ответ будет позже, успехом или ошибкой.", code: "const title = Promise.resolve('Node');", focus: "Promise описывает будущий результат; обработайте и успешный путь, и ошибку." },
+    { title: "async и await", analogy: "await — вежливая пауза: дождаться записки, не останавливая всю диспетчерскую.", code: "async function title() { return await Promise.resolve('Node'); }", focus: "async-функция возвращает Promise; await используют там, где результат действительно нужен." },
+    { title: "Ошибки", analogy: "try/catch — стол для аккуратной записи, почему обещание не выполнилось.", code: "try { await work(); } catch (error) { return { ok: false }; }", focus: "Не показывайте пользователю внутренние детали ошибки и не игнорируйте отказ Promise." },
+  ],
+  middle: [
+    { title: "Event loop", analogy: "Event loop — диспетчер, который берёт следующую готовую записку, пока другие ждут ответа.", code: "queueMicrotask(() => console.log('потом'));", focus: "Долгая синхронная работа мешает всем запросам; I/O обычно ждут неблокирующе." },
+    { title: "HTTP-ответ", analogy: "HTTP-ответ — конверт с кодом статуса, видом содержимого и понятным текстом.", code: "res.writeHead(200, { 'Content-Type': 'application/json' });", focus: "Указывайте корректный статус и Content-Type, а ошибки возвращайте безопасно." },
+    { title: "Маршрут", analogy: "Маршрут — табличка у двери: метод и путь ведут к одному понятному действию.", code: "if (req.method === 'GET' && url.pathname === '/health') { }", focus: "Проверяйте метод и путь до обработки, не делайте один обработчик для всего." },
+    { title: "Валидация входа", analogy: "Валидация — охранник, который сверяет записку с коротким шаблоном.", code: "const name = typeof body.name === 'string' ? body.name : null;", focus: "Не доверяйте внешнему вводу и ограничивайте размер/формат данных." },
+    { title: "Переменные окружения", analogy: "Переменная окружения — закрытая записка в сейфе, не строка в исходнике.", code: "const port = Number(process.env.PORT ?? 3000);", focus: "Секреты не помещают в код, логи и репозиторий; проверяйте отсутствие значения честно." },
+    { title: "package.json", analogy: "package.json — карточка проекта: имя, команды, зависимости и границы.", code: "{ \"type\": \"module\", \"scripts\": { \"test\": \"node --test\" } }", focus: "Держите команды короткими, версии проверяемыми, а зависимости — осмысленными." },
+  ],
+  senior: [
+    { title: "Неблокирующая граница", analogy: "Длинную доставку не выполняют на стойке: её передают помощнику, а стойка отвечает следующему посетителю.", code: "await Promise.resolve('I/O boundary');", focus: "Не помещайте тяжёлые вычисления и большие синхронные циклы в обработчик запроса." },
+    { title: "Таймаут и отмена", analogy: "Таймаут — будильник: если ответ не пришёл вовремя, сценарий заканчивается честно.", code: "const signal = AbortSignal.timeout(1_000);", focus: "У любой внешней операции должны быть лимит времени и понятная ветка отказа." },
+    { title: "Безопасность зависимостей", analogy: "Зависимость — приглашённый помощник: сначала проверить имя, происхождение и договор.", code: "dependencies: exact versions + lockfile", focus: "Фиксируйте версии, проверяйте lockfile и не запускайте скрипты неизвестных пакетов без понимания." },
+    { title: "Permission model", analogy: "Permission model — список дверей, к которым процессу разрешён доступ.", code: "node --permission app.js", focus: "Ограничение возможностей может уменьшить ущерб от ошибки или скомпрометированной зависимости." },
+    { title: "node:test", analogy: "Тест — маленький инспектор, который проверяет одно обещание функции.", code: "import test from 'node:test';\nimport assert from 'node:assert/strict';", focus: "Пишите независимые unit-тесты и отделяйте дорогие окружения от простых проверок." },
+    { title: "Логи без секретов", analogy: "Лог — журнал маршрута, а не копия всех личных записок.", code: "console.info({ event: 'request_done', status: 200 });", focus: "Логируйте события и статус, но не токены, пароли, полные тела запроса или личные данные." },
+  ],
+  applied: [
+    { title: "Проект: health endpoint", analogy: "Health endpoint — зелёная лампа диспетчерской: коротко сообщает, жива ли она.", code: "GET /health → { ok: true }", focus: "Проект начинается с одного маленького маршрута и понятного статуса." },
+    { title: "Проект: модель входа", analogy: "Модель входа — бланк, где у каждого поля есть имя и правило.", code: "{ name: string, limit: number }", focus: "Сначала валидируйте данные, затем используйте их в логике." },
+    { title: "Проект: результат", analogy: "Результат API — конверт с честным кодом и безопасным телом.", code: "{ ok: true, data: { name } }", focus: "Отделяйте успешные данные от безопасного сообщения об ошибке." },
+    { title: "Проект: тест", analogy: "Тест маршрута — репетиция: запрос, ожидаемый статус и ожидаемое тело.", code: "test('health returns ok', () => assert.equal(status, 200));", focus: "Проверьте обычный и граничный сценарии до добавления новых функций." },
+    { title: "Проект: checklist безопасности", analogy: "Чек-лист — короткая карта перед открытием двери наружу.", code: "validate → timeout → safe error → no secrets → tests", focus: "Проверьте вход, таймаут, ошибки, зависимости, секреты и тесты." },
+    { title: "Проект: README", analogy: "README — инструкция на стойке: как запустить, проверить и какие есть границы.", code: "цель → команды → env без значений → тесты → ограничения", focus: "README не должен содержать реальные секреты, адреса или внутренние детали инфраструктуры." },
+  ],
+};
+const titles: Record<Stage, string> = { junior: "Том I · Junior: модули и асинхронность", middle: "Том II · Middle: HTTP и проект", senior: "Том III · Senior: надёжность и безопасность", applied: "Том IV · Проекты" };
+const body = (seed: Seed) => `Цель. Понять тему «${seed.title}».\n\nАналогия. ${seed.analogy}\n\n### Пример\n\n\`\`\`js\n${seed.code}\n\`\`\`\n\n### Разбор\n\n${seed.focus}\n\n> ${security}\n\n### Практика\n\n#### Задача 1\nОбъясните этот Node.js-фрагмент своими словами.\n\nПодсказка. Найдите модуль, Promise, await, вход HTTP, статус или проверку безопасности.\n\nРазбор решения. ${seed.focus}\n\n#### Задача 2\nНазовите безопасный граничный случай.\n\nПодсказка. Подумайте о пустом входе, таймауте, отклонённом Promise или отсутствующей переменной окружения.\n\nРазбор решения. ${seed.analogy}\n\n#### Задача 3\nНапишите короткий похожий пример без реального доступа к сети, файлам или секретам.\n\nПодсказка. Верните маленькие данные, а ошибку обработайте явно.\n\nРазбор решения. Маленький проверяемый шаг легче тестировать и безопаснее поддерживать.`;
+export const nodeCourseContent: CourseData = { volumes: (Object.keys(seeds) as Stage[]).map((stage, stageIndex) => ({ id: stage, title: titles[stage], lessons: seeds[stage].map((seed, index) => ({ id: `node-${stage}-${stageIndex * 6 + index + 1}`, number: stageIndex * 6 + index + 1, title: seed.title, goal: `Понять тему «${seed.title}».`, analogy: seed.analogy, code: seed.code, body: body(seed) })) })) };

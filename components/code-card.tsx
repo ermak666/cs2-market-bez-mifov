@@ -1,0 +1,70 @@
+import * as Clipboard from "expo-clipboard";
+import { useMemo, useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
+
+import { runLearningPython, type LearningTraceStep, type Value } from "@/lib/learning-python";
+import { runLearningJavaScript } from "@/lib/learning-javascript";
+import { checkLearningTypeScript } from "@/lib/learning-typescript";
+import { analyzeLearningReact } from "@/lib/learning-react";
+import { analyzeLearningRedux } from "@/lib/learning-redux";
+import { analyzeLearningAngular } from "@/lib/learning-angular";
+import { analyzeLearningBackend } from "@/lib/learning-backend";
+import { analyzeLearningTesting } from "@/lib/learning-testing";
+import { analyzeLearningLinux } from "@/lib/learning-linux";
+import { analyzeLearningDocker } from "@/lib/learning-docker";
+import { analyzeLearningKotlin } from "@/lib/learning-kotlin";
+import { previewLearningWeb } from "@/lib/web-preview";
+
+function formatVariable(value: Value) {
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "boolean") return value ? "True" : "False";
+  return JSON.stringify(value);
+}
+
+export function CodeCard({ code }: { code: string }) {
+  const [preparedInput, setPreparedInput] = useState("4");
+  const [runOutput, setRunOutput] = useState<string[] | null>(null);
+  const [runVariables, setRunVariables] = useState<Record<string, Value> | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+  const [runTrace, setRunTrace] = useState<LearningTraceStep[]>([]);
+  const [traceOpen, setTraceOpen] = useState(false);
+  const needsInput = useMemo(() => /\binput\s*\(/.test(code), [code]);
+  const isReduxSnippet = useMemo(() => /\b(?:createSlice|configureStore|createAsyncThunk|useSelector|useDispatch|dispatch\s*\(|selector|reducers\s*:)\b/.test(code), [code]);
+  const isAngularSnippet = useMemo(() => /@(?:Component|Injectable)\s*\(|\b(?:input(?:\.required)?|output|inject|signal|computed|Routes|FormGroup|FormControl|ChangeDetectionStrategy\.OnPush|RouterOutlet)\b|@(?:if|for)\s*\(/.test(code), [code]);
+  const isBackendSnippet = useMemo(() => /@app\.(?:get|post|put|patch|delete)\s*\(|\b(?:BaseModel|models\.Model|JsonResponse|HTTPException|Book\.objects|path\s*\()\b/.test(code), [code]);
+  const isTestingSnippet = useMemo(() => /\b(?:assert|pytest\.|expect\s*\(|\b(?:it|test)\s*\(\s*['"]|\b(?:vi|jest)\.fn|coverage)\b/.test(code), [code]);
+  const isLinuxSnippet = useMemo(() => /(^|\n)\s*(?:pwd|ls|cd|mkdir|cat|grep|ps|tail|echo|chmod|man)\b|\brwx[rwx-]{6}\b|\|/.test(code), [code]);
+  const isDockerSnippet = useMemo(() => /^\s*(?:FROM|WORKDIR|COPY|CMD|EXPOSE|USER|HEALTHCHECK)\b|\b(?:services|volumes|networks|healthcheck):\s*$/mi.test(code), [code]);
+  const isKotlinSnippet = useMemo(() => /\b(?:val|var|fun|data\s+class|sealed\s+class|suspend|MonoBehaviour|GameObject|Rigidbody|Debug\.Log|OnTriggerEnter|OnCollisionEnter|ScriptableObject|public|private|void|int|float|package\s+main|func|struct|interface|goroutine|chan|context|mut|fn|enum|Option|Result|trait|impl|async|await|Some|None|Ok|Err|manifest|mod-name|game_version|dependencies|load[-_ ]?order|backup|rollback|changelog|credits|license|Promise|queueMicrotask|setImmediate|process\.env|AbortSignal|createServer|node:test|Get-[A-Za-z]+|Set-[A-Za-z]+|New-[A-Za-z]+|Test-[A-Za-z]+|Select-Object|Where-Object|ForEach-Object|ConvertTo-Json|ConvertFrom-Json|Invoke-RestMethod|Get-ExecutionPolicy|Describe|Should)\b|\$[A-Za-z_][\w]*|\#\[test\]|:\s*(?:Int|String|Boolean|\w+\?)\b|\?\.|\?:/.test(code), [code]);
+  const isAndroidSnippet = useMemo(() => /@Composable\b|\b(?:Text|Button|TextField|Scaffold|LazyColumn|ViewModel|NavHost|navController|LaunchedEffect|Modifier)\b/.test(code), [code]);
+  const isReactSnippet = useMemo(() => /\b(?:useState|useEffect)\s*\(|\bfunction\s+[A-Z][\w]*\s*\([^)]*\)\s*\{[^}]*return\s*</s.test(code) || /onClick\s*=|<\w+[\s/>]/.test(code), [code]);
+  const isTypeScriptSnippet = useMemo(() => !isReduxSnippet && !isAngularSnippet && !isBackendSnippet && !isTestingSnippet && !isLinuxSnippet && !isDockerSnippet && !isKotlinSnippet && !isAndroidSnippet && !isReactSnippet && (/\b(?:const|let)\s+[A-Za-z_$][\w$]*\s*:\s*(?:string|number|boolean)\b|\b(?:interface|type)\s+[A-Za-z_$]/.test(code)), [code, isReduxSnippet, isAngularSnippet, isBackendSnippet, isTestingSnippet, isLinuxSnippet, isDockerSnippet, isKotlinSnippet, isAndroidSnippet, isReactSnippet]);
+  const isJavaScriptSnippet = useMemo(() => !isReduxSnippet && !isAngularSnippet && !isBackendSnippet && !isTestingSnippet && !isLinuxSnippet && !isTypeScriptSnippet && /\b(?:const|let|console\.log|function|if|for|Promise)\b/.test(code), [code, isReduxSnippet, isAngularSnippet, isBackendSnippet, isTestingSnippet, isLinuxSnippet, isTypeScriptSnippet]);
+  const isWebSnippet = useMemo(() => !isReduxSnippet && !isAngularSnippet && !isBackendSnippet && !isTestingSnippet && !isLinuxSnippet && !isJavaScriptSnippet && (/^</.test(code.trim()) || /(?:^|\n)\s*[^\n]+\{\s*(?:color|display|padding|margin|background)/.test(code)), [code, isReduxSnippet, isAngularSnippet, isBackendSnippet, isTestingSnippet, isLinuxSnippet, isJavaScriptSnippet]);
+  if (!code.trim()) return null;
+  return (
+    <View className="rounded-3xl border border-[#303758] bg-[#111426] p-5 shadow-sm">
+      <View className="mb-3 flex-row items-center justify-between">
+        <View className="rounded-full bg-[#15363A] px-3 py-1"><Text className="text-xs font-bold uppercase tracking-widest text-[#98F4EA]">{isWebSnippet ? "HTML/CSS · предпросмотр" : isReduxSnippet ? "Redux Toolkit · разбор" : isAngularSnippet ? "Angular · разбор" : isBackendSnippet ? "FastAPI/Django · разбор" : isTestingSnippet ? "pytest/Jest · разбор" : isLinuxSnippet ? "Linux · разбор" : isDockerSnippet ? "Docker · разбор" : isAndroidSnippet ? "Android · разбор" : isKotlinSnippet ? "C# / Unity · разбор" : isReactSnippet ? "React · разбор" : isTypeScriptSnippet ? "TypeScript · проверка" : isJavaScriptSnippet ? "JavaScript · песочница" : "Учебный пример"}</Text></View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Скопировать код"
+          onPress={() => Clipboard.setStringAsync(code)}
+          style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}
+        >
+          <Text className="rounded-full text-sm font-bold text-[#D3D7FF]">Копировать</Text>
+        </Pressable>
+      </View>
+      <Text selectable className="font-mono text-[13px] leading-6 text-[#F7F5FF]">{code}</Text>
+      <View className="mt-5 border-t border-[#303758] pt-4">
+        <Text className="text-xs font-bold tracking-wide text-[#98F4EA]">{isWebSnippet ? "БЕЗОПАСНЫЙ ПРЕДПРОСМОТР" : isReduxSnippet ? "УЧЕБНЫЙ РАЗБОР REDUX" : isAngularSnippet ? "УЧЕБНЫЙ РАЗБОР ANGULAR" : isBackendSnippet ? "УЧЕБНЫЙ РАЗБОР BACKEND" : isTestingSnippet ? "УЧЕБНЫЙ РАЗБОР ТЕСТА" : isLinuxSnippet ? "УЧЕБНЫЙ РАЗБОР LINUX" : isDockerSnippet ? "УЧЕБНЫЙ РАЗБОР DOCKER" : isAndroidSnippet ? "УЧЕБНЫЙ РАЗБОР ANDROID" : isKotlinSnippet ? "УЧЕБНЫЙ РАЗБОР C# / UNITY" : "УЧЕБНЫЙ ЗАПУСК"}</Text>
+        {needsInput ? <TextInput value={preparedInput} onChangeText={setPreparedInput} placeholder="Ответы для input(), каждый с новой строки" placeholderTextColor="#9BA1C9" multiline className="mt-3 rounded-xl border border-[#41496F] bg-[#171D37] px-3 py-3 font-mono text-sm text-white" /> : null}
+        <Pressable accessibilityRole="button" onPress={() => { if (isWebSnippet) { const result = previewLearningWeb(code); setRunOutput(result.output); setRunVariables(null); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isReduxSnippet) { const result = analyzeLearningRedux(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isAngularSnippet) { const result = analyzeLearningAngular(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isBackendSnippet) { const result = analyzeLearningBackend(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isTestingSnippet) { const result = analyzeLearningTesting(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isLinuxSnippet) { const result = analyzeLearningLinux(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isDockerSnippet) { const result = analyzeLearningDocker(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isKotlinSnippet) { const result = analyzeLearningKotlin(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isReactSnippet) { const result = analyzeLearningReact(code); setRunOutput(result.output); setRunVariables(null); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isTypeScriptSnippet) { const result = checkLearningTypeScript(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } if (isJavaScriptSnippet) { const result = runLearningJavaScript(code); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace([]); setTraceOpen(false); return; } const result = runLearningPython(code, preparedInput); setRunOutput(result.output); setRunVariables(result.variables); setRunError(result.error ?? null); setRunTrace(result.trace); setTraceOpen(false); }} style={({ pressed }) => [{ marginTop: 12, alignSelf: "flex-start", borderRadius: 12, backgroundColor: "#5DE2D2", paddingHorizontal: 14, paddingVertical: 10 }, { opacity: pressed ? 0.78 : 1 }]}><Text className="font-bold text-[#10131D]">▶ {isWebSnippet ? "Показать предпросмотр" : isReduxSnippet ? "Разобрать store" : isAngularSnippet ? "Разобрать Angular" : isBackendSnippet ? "Разобрать backend" : isTestingSnippet ? "Разобрать тест" : isLinuxSnippet ? "Разобрать Linux" : isDockerSnippet ? "Разобрать Docker" : isKotlinSnippet ? "Разобрать Kotlin" : isReactSnippet ? "Разобрать пример" : isTypeScriptSnippet ? "Проверить типы" : "Запустить пример"}</Text></Pressable>
+        {runOutput && !runError ? <View className="mt-3 rounded-xl bg-[#0B0F22] p-3"><Text className="text-xs font-bold text-[#91E0C4]">РЕЗУЛЬТАТ ВЫПОЛНЕНИЯ</Text>{runOutput.length ? <Text className="mt-2 font-mono text-sm leading-5 text-[#F4F2FF]">{runOutput.join("\n")}</Text> : null}{runVariables && Object.keys(runVariables).length ? <View className={runOutput.length ? "mt-3 border-t border-[#303758] pt-3" : "mt-2"}><Text className="text-xs font-bold text-[#BFC6FF]">ПЕРЕМЕННЫЕ ПОСЛЕ ЗАПУСКА</Text><Text className="mt-2 font-mono text-sm leading-5 text-[#F4F2FF]">{Object.entries(runVariables).map(([name, value]) => `${name} = ${formatVariable(value)}`).join("\n")}</Text></View> : null}{!runOutput.length && (!runVariables || !Object.keys(runVariables).length) ? <Text className="mt-2 font-mono text-sm leading-5 text-[#F4F2FF]">Код выполнился: он не печатает текст и не сохраняет переменные.</Text> : null}</View> : null}
+        {runTrace.length ? <View className="mt-3 rounded-xl border border-[#303758] bg-[#171D37] p-3"><Pressable accessibilityRole="button" onPress={() => setTraceOpen((open) => !open)} style={({ pressed }) => ({ opacity: pressed ? 0.72 : 1 })}><Text className="text-xs font-bold text-[#BFC6FF]">{traceOpen ? "⌃ СКРЫТЬ" : "⌄ ПОКАЗАТЬ"} ШАГИ ВЫПОЛНЕНИЯ · {runTrace.length}</Text></Pressable>{traceOpen ? <View className="mt-3 gap-2">{runTrace.slice(0, 16).map((step, index) => <View key={`${step.line}-${index}`} className="rounded-lg bg-[#0B0F22] p-2"><Text className="text-[11px] font-bold text-[#91E0C4]">ШАГ {index + 1}</Text><Text className="mt-1 font-mono text-xs text-[#F4F2FF]">{step.line}</Text><Text className="mt-1 font-mono text-[11px] text-[#BFC6FF]">{Object.keys(step.variables).length ? Object.entries(step.variables).map(([name, value]) => `${name}=${formatVariable(value)}`).join(" · ") : "переменных пока нет"}{step.output.length ? ` · вывод: ${step.output.at(-1)}` : ""}</Text></View>)}{runTrace.length > 16 ? <Text className="text-xs text-[#AAB2D9]">Показаны первые 16 шагов из {runTrace.length}.</Text> : null}</View> : null}</View> : null}
+        {runError ? <View className="mt-3 rounded-xl bg-[#3B1724] p-3"><Text className="text-xs font-bold text-[#FFB9C5]">КОМАНДА НЕ ВЫПОЛНЕНА</Text><Text className="mt-2 text-sm leading-5 text-[#FFE2E8]">{runError}</Text></View> : null}
+        <Text className="mt-3 text-xs leading-4 text-[#AAB2D9]">{isWebSnippet ? "Предпросмотр не публикует код, не исполняет JavaScript и не загружает внешние ресурсы." : isReduxSnippet ? "Redux Toolkit-пример безопасно разбирается без выполнения сети, файлов, DOM, браузерных хранилищ и сторонних библиотек." : isAngularSnippet ? "Angular-пример безопасно разбирается без выполнения кода, сети, файлов, DOM, браузерных хранилищ и сторонних библиотек." : isBackendSnippet ? "Backend-пример безопасно разбирается без запуска сервера, сети, базы данных, файлов, внешних модулей и сторонних библиотек." : isReactSnippet ? "React-пример безопасно разбирается без выполнения JSX, сети, файлов, DOM и сторонних библиотек." : isTypeScriptSnippet ? "Проверка TypeScript безопасна: без выполнения кода, сети, файлов, DOM и сторонних библиотек." : isJavaScriptSnippet ? "JavaScript выполняется в безопасной учебной песочнице: без сети, файлов, DOM и сторонних библиотек." : "Запуск учебный: без файлов, сети и сторонних библиотек."}</Text>
+      </View>
+    </View>
+  );
+}
