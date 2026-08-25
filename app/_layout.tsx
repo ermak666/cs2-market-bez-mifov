@@ -9,8 +9,6 @@ import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
-import { SoundFeedbackProvider } from "@/lib/sound-feedback";
-import { LessonAudioProvider } from "@/lib/lesson-audio";
 import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { inspectKnowledgeReview } from "@/lib/knowledge-review";
 import { loadCompletedLessons } from "@/lib/course-progress";
@@ -165,7 +163,7 @@ export default function RootLayout() {
 
   if (shouldOverrideSafeArea) {
     return (
-      <AppErrorBoundary><ThemeProvider><SoundFeedbackProvider><LessonAudioProvider>
+      <AppErrorBoundary><ThemeProvider>
         <SafeAreaProvider initialMetrics={providerInitialMetrics}>
           <SafeAreaFrameContext.Provider value={frame}>
             <SafeAreaInsetsContext.Provider value={insets}>
@@ -173,13 +171,13 @@ export default function RootLayout() {
             </SafeAreaInsetsContext.Provider>
           </SafeAreaFrameContext.Provider>
         </SafeAreaProvider>
-      </LessonAudioProvider></SoundFeedbackProvider></ThemeProvider></AppErrorBoundary>
+      </ThemeProvider></AppErrorBoundary>
     );
   }
 
   return (
-    <AppErrorBoundary><ThemeProvider><SoundFeedbackProvider><LessonAudioProvider>
+    <AppErrorBoundary><ThemeProvider>
       <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
-    </LessonAudioProvider></SoundFeedbackProvider></ThemeProvider></AppErrorBoundary>
+    </ThemeProvider></AppErrorBoundary>
   );
 }

@@ -9,11 +9,9 @@ import { ScreenContainer } from "@/components/screen-container";
 import { loadCompletedLessons, recordQuizResult, toggleCompletedLesson } from "@/lib/course-progress";
 import { createBookmarkCategory, loadBookmarks, toggleLessonBookmark, type BookmarkState } from "@/lib/lesson-bookmarks";
 import { useThemeContext } from "@/lib/theme-provider";
-import { useSoundFeedback } from "@/lib/sound-feedback";
 import { getLesson, getLessonNavigation, isVolumeComplete } from "@/shared/course-data";
 import { useColors } from "@/hooks/use-colors";
 import { getLessonQuiz } from "@/shared/lesson-quiz";
-import { useLessonAudio } from "@/lib/lesson-audio";
 import { loadMasteryProgress, saveMasteryProgress } from "@/lib/mastery-progress";
 
 export default function LessonScreen() {
@@ -26,10 +24,7 @@ export default function LessonScreen() {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const { fontScale } = useThemeContext();
-  const { playSuccess, playTap } = useSoundFeedback();
   const colors = useColors();
-  const { activeLessonId, playbackState, playbackRate, canPause, playLesson, pause, resume, stop, setPlaybackRate } = useLessonAudio();
-  const isCurrentVoiceover = activeLessonId === lesson?.id;
 
   useFocusEffect(useCallback(() => {
     loadCompletedLessons().then(setCompleted);
@@ -45,11 +40,6 @@ export default function LessonScreen() {
       await saveMasteryProgress({ ...current, lastOpened: next });
     });
   }, [lesson]);
-
-  const startVoiceover = () => {
-    if (!lesson) return;
-    void playLesson(lesson.id, `${lesson.title}. ${lesson.goal}. ${lesson.analogy}`);
-  };
 
   if (!lesson) {
     return <ScreenContainer className="items-center justify-center p-6"><View className="w-full max-w-sm rounded-3xl border border-border bg-surface p-6"><Text className="text-xl font-bold text-foreground">Урок не найден</Text><Text className="mt-3 text-sm leading-5 text-muted">Возможно, ссылка устарела. Вернитесь к содержанию и выберите нужный урок из списка.</Text><Pressable accessibilityRole="button" onPress={() => router.replace("/learn" as never)} style={({ pressed }) => ({ marginTop: 20, alignItems: "center", borderRadius: 16, backgroundColor: colors.primary, paddingVertical: 14, opacity: pressed ? 0.78 : 1 })}><Text className="font-bold text-white">Открыть учебник</Text></Pressable></View></ScreenContainer>;
@@ -70,9 +60,8 @@ export default function LessonScreen() {
           <View className="self-start rounded-full bg-[#242B4D] px-3 py-2"><Text className="text-xs font-bold tracking-widest text-[#C9C6FF]">УРОК {navigation?.lessonIndex ?? lesson.number} ИЗ {navigation?.lessonCount ?? 1}</Text></View>
           <Text className="mt-3 text-3xl font-bold leading-10 text-white">{lesson.title}</Text>
           <Text style={{ fontSize: 16 * fontScale, lineHeight: 24 * fontScale }} className="mt-3 text-[#D8DDEA]">{lesson.goal}</Text>
-          <View className="mt-5 flex-row flex-wrap gap-2">{!isCurrentVoiceover ? <Pressable accessibilityRole="button" accessibilityLabel="Слушать краткое объяснение урока" onPress={startVoiceover} style={({ pressed }) => [{ borderRadius: 999, backgroundColor: "#E7E0FF", paddingHorizontal: 16, paddingVertical: 12 }, { opacity: pressed ? 0.8 : 1 }]}><Text className="font-bold text-primary">▶ Слушать урок</Text></Pressable> : null}{isCurrentVoiceover && playbackState === "playing" && canPause ? <Pressable accessibilityRole="button" accessibilityLabel="Поставить озвучивание на паузу" onPress={pause} style={({ pressed }) => [{ borderRadius: 999, backgroundColor: "#E7E0FF", paddingHorizontal: 16, paddingVertical: 12 }, { opacity: pressed ? 0.8 : 1 }]}><Text className="font-bold text-primary">Ⅱ Пауза</Text></Pressable> : null}{isCurrentVoiceover && playbackState === "paused" && canPause ? <Pressable accessibilityRole="button" accessibilityLabel="Продолжить озвучивание" onPress={resume} style={({ pressed }) => [{ borderRadius: 999, backgroundColor: "#E7E0FF", paddingHorizontal: 16, paddingVertical: 12 }, { opacity: pressed ? 0.8 : 1 }]}><Text className="font-bold text-primary">▶ Продолжить</Text></Pressable> : null}{isCurrentVoiceover ? <Pressable accessibilityRole="button" accessibilityLabel="Полностью остановить озвучивание" onPress={stop} style={({ pressed }) => [{ borderRadius: 999, borderWidth: 1, borderColor: "#FFB9C5", backgroundColor: "#3B1724", paddingHorizontal: 16, paddingVertical: 12 }, { opacity: pressed ? 0.8 : 1 }]}><Text className="font-bold text-[#FFE2E8]">■ Стоп</Text></Pressable> : null}<Pressable accessibilityRole="button" onPress={() => setShowBookmarks((value) => !value)} style={({ pressed }) => [{ borderRadius: 999, borderWidth: 1, borderColor: "#6872AA", backgroundColor: "#242B4D", paddingHorizontal: 16, paddingVertical: 12 }, { opacity: pressed ? 0.8 : 1 }]}><Text className="font-bold text-white">В закладки</Text></Pressable></View>
-          <Text className="mt-3 text-xs leading-4 text-[#D8DDEA]">Озвучивание использует русский голос вашего устройства. Новый запуск сразу остановит предыдущий.</Text>
-          {isCurrentVoiceover ? <View className="mt-4 rounded-2xl bg-[#242B4D] p-4"><Text className="text-xs font-bold text-[#C9C6FF]">Идёт озвучивание краткого объяснения урока.</Text><View className="mt-3 flex-row flex-wrap gap-2">{[0.8, 1, 1.2].map((rate) => <Pressable key={rate} accessibilityRole="button" onPress={() => setPlaybackRate(rate)} className={`rounded-lg px-3 py-2 ${playbackRate === rate ? "bg-[#A993FF]" : "bg-[#151A36]"}`}><Text className="text-xs font-bold text-white">Следующий запуск: {rate.toFixed(1)}×</Text></Pressable>)}</View></View> : null}
+          <View className="mt-5 flex-row flex-wrap gap-2"><Pressable accessibilityRole="button" onPress={() => setShowBookmarks((value) => !value)} style={({ pressed }) => [{ borderRadius: 999, borderWidth: 1, borderColor: "#6872AA", backgroundColor: "#242B4D", paddingHorizontal: 16, paddingVertical: 12 }, { opacity: pressed ? 0.8 : 1 }]}><Text className="font-bold text-white">В закладки</Text></Pressable></View>
+
         </View>
         {showBookmarks && bookmarks ? <View className="mt-4 rounded-3xl border border-border bg-surface p-5"><Text className="text-lg font-bold text-foreground">Категория закладки</Text><Text className="mt-2 text-sm leading-5 text-muted">Выберите одну или несколько личных папок. Повторное нажатие уберёт урок из категории.</Text><View className="mt-4 flex-row flex-wrap gap-2">{bookmarks.categories.map((category) => { const active = bookmarks.bookmarks.some((item) => item.lessonId === lesson.id && item.categoryId === category.id); return <Pressable key={category.id} onPress={async () => setBookmarks(await toggleLessonBookmark(lesson.id, category.id))} className={`rounded-full px-4 py-2 ${active ? "bg-primary" : "border border-border bg-background"}`}><Text className={`font-bold ${active ? "text-white" : "text-foreground"}`}>{active ? "✓ " : ""}{category.name}</Text></Pressable>; })}</View><View className="mt-4 flex-row gap-2"><TextInput value={newCategory} onChangeText={setNewCategory} placeholder="Новая категория" placeholderTextColor="#667085" className="flex-1 rounded-xl border border-border bg-background px-3 py-3 text-foreground" /><Pressable onPress={async () => { const next = await createBookmarkCategory(newCategory); setBookmarks(next); setNewCategory(""); }} className="items-center justify-center rounded-xl bg-primary px-4"><Text className="font-bold text-white">Создать</Text></Pressable></View></View> : null}
 
@@ -89,7 +78,7 @@ export default function LessonScreen() {
 
         <Pressable
           accessibilityRole="button"
-          onPress={async () => { const next = await toggleCompletedLesson(lesson.id); setCompleted(next); if (next.includes(lesson.id)) { playSuccess(); } else { playTap(); } }}
+          onPress={async () => { const next = await toggleCompletedLesson(lesson.id); setCompleted(next);  }}
           style={({ pressed }) => ({ opacity: pressed ? 0.78 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}
           className={`mt-8 items-center rounded-2xl border px-5 py-4 shadow-sm ${done ? "border-success bg-[#DFF6EC]" : "border-[#8D7BFF] bg-primary"}`}
         >

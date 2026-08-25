@@ -4,7 +4,6 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { BackButton } from "@/components/back-button";
 import { useThemeContext } from "@/lib/theme-provider";
-import { useSoundFeedback } from "@/lib/sound-feedback";
 import { useColors } from "@/hooks/use-colors";
 
 const fontOptions = [
@@ -16,7 +15,6 @@ const fontOptions = [
 export default function SettingsScreen() {
   const router = useRouter();
   const { fontScale, setFontScale } = useThemeContext();
-  const { playTap } = useSoundFeedback();
   const colors = useColors();
   return (
     <ScreenContainer className="px-5">
@@ -37,7 +35,7 @@ export default function SettingsScreen() {
           <View className="mt-5 flex-row gap-2">
             {fontOptions.map((option) => {
               const active = fontScale === option.value;
-              return <Pressable key={option.label} onPress={() => { playTap(); setFontScale(option.value); }} style={({ pressed }) => [{ flex: 1, alignItems: "center", borderRadius: 12, borderWidth: 1, borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.background, paddingVertical: 12 }, { opacity: pressed ? 0.75 : 1 }]}><Text className={`font-bold ${active ? "text-white" : "text-foreground"}`}>{option.label}</Text></Pressable>;
+              return <Pressable key={option.label} onPress={() => { setFontScale(option.value); }} style={({ pressed }) => [{ flex: 1, alignItems: "center", borderRadius: 12, borderWidth: 1, borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary : colors.background, paddingVertical: 12 }, { opacity: pressed ? 0.75 : 1 }]}><Text className={`font-bold ${active ? "text-white" : "text-foreground"}`}>{option.label}</Text></Pressable>;
             })}
           </View>
         </View>

@@ -88,12 +88,6 @@ const config: ExpoConfig = {
     "expo-router",
     "expo-notifications",
     [
-      "expo-audio",
-      {
-        microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",
-      },
-    ],
-    [
       "expo-video",
       {
         supportsBackgroundPlayback: true,
